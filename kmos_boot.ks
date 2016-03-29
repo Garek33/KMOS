@@ -9,4 +9,8 @@ for local v in volumes {
 }
 switch to 1.
 
+kmos_load_all().
 kmos_main().
+
+clearscreen.
+print "KMOS shut down".

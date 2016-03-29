@@ -1,20 +1,8 @@
 @lazyglobals off
 
 {
-	function kmos_has_boot {
-		return (core:bootfilename = "kmos_boot").
-	}
-
-	function kmos_toggle_boot {
-		if(kmos_has_boot) {
-			set core:bootfilename to "".
-		} else {
-			set core:bootfilename to "kmos_boot".
-		}
-	}
-
 	function kmos_restart {
-		restart.
+		reboot.
 	}
 
 	function kmos_perf_task {

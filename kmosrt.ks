@@ -254,6 +254,18 @@ function kmos_has_terminal {
 	return core:allevents:contains("Close Terminal").
 }
 
+function kmos_has_boot {
+	return (core:bootfilename = "kmos_boot").
+}
+
+function kmos_toggle_boot {
+	if(kmos_has_boot) {
+		set core:bootfilename to "".
+	} else {
+		set core:bootfilename to "kmos_boot".
+	}
+}
+
 function kmos_menu_singlepage {
 	parameter title, texts, actions.
 	local pagesize is min(terminal:height-1, 10).
@@ -411,20 +423,25 @@ function kmos_main_menu {
 	return kmos_menu_step("Kerbal Modular Operating System", _kmos_item_desc, _kmos_item_action).
 }
 
-function kmos_main {
+function kmos_load_all {
 	kmos_load_state().
 	for local v in volumes {
-		switch to v.
-		if(v:exists("kmos_load")) {
-			run kmos_load.
-		}
-		for local f in list("kmos_ui") {
-			if(v:exists(f)) {
-				execute("run once " + f).
+		if(not v = archive) {
+			switch to v.
+			if(v:exists("kmos_load")) {
+				run kmos_load.
+			}
+			for local f in list("kmos_ui") {
+				if(v:exists(f)) {
+					execute("run once " + f).
+				}
 			}
 		}
 	}
 	switch to 1.
+}
+
+function kmos_main {
 	kmos_add_mode_withitem("kmos_showerrors", "Check Errors", kmos_mode_showerrors_begin@, kmos_showerrors_step@, kmos_noop@).
 	kmos_add_mode("kmos_main", kmos_menu_begin@, kmos_main_menu@, kmos_menu_end@).
 	kmos_ag_init().
