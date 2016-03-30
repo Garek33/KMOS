@@ -33,7 +33,7 @@ function kmos_delgate_nvl {
 }
 
 function kmos_ag_init {
-	from {local i is 0.} until i = 10 step {set i to i+1} do {
+	from {local i is 0.} until i = 10 step {set i to i+1.} do {
 		_kmos_last_ag_state:add(false).
 	}
 }
@@ -53,7 +53,7 @@ function kmos_ag_byindex {
 }
 
 function kmos_ag_task {
-	from {local i is 0.} until i = 10 step {set i to i+1} do {
+	from {local i is 0.} until i = 10 step {set i to i+1.} do {
 		set _kmos_last_ag_state[i] to kmos_ag_byindex(i).
 	}
 	return true.
@@ -330,7 +330,7 @@ function kmos_menu_step {
 	}
 	local act_texts is list().
 	local act_actions is list().
-	from { local i is 0.} until i = descs:length step {
+	from { local i is 0.} until i = descs:length step {set i to i+1.} {
 		if(descs[i]:typename() = "KOSDelegate") {
 			act_texts:add(descs[i]:call()).
 		} else {
@@ -356,7 +356,7 @@ function kmos_menu_step {
 		local itemspp is terminal:height - 3.
 		local ptexts is list().
 		local pactions is list().
-		from {local i is page * itemspp.} until i = (page+1) * itemspp step {set i to i+1} do {
+		from {local i is page * itemspp.} until i = (page+1) * itemspp step {set i to i+1.} do {
 			ptexts:add(act_texts[i]).
 			pactions:add(act_actions[i]).
 		}
