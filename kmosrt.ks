@@ -304,7 +304,7 @@ function kmos_menu_nextpage {
 
 function kmos_menu_prevpage {
 	if(_kmos_menu_page > 0) {
-		_kmos_menu_page:push(_kmos_menu_page:pop(_kmos_menu_page - 1).
+		_kmos_menu_page:push(_kmos_menu_page:pop() - 1).
 	}
 	return true.
 }
