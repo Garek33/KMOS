@@ -1,4 +1,4 @@
-@lazyglobals off
+@LAZYGLOBAL OFF.
 
 {
 	local core_runtime is list("kmosrt", "lib_exec").

@@ -1,4 +1,4 @@
-@lazyglobals off
+@LAZYGLOBAL OFF.
 
 run once lib_exec.
 

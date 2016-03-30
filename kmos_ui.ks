@@ -1,4 +1,4 @@
-@lazyglobals off
+@LAZYGLOBAL OFF.
 
 {
 	function kmos_restart {
