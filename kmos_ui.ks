@@ -10,8 +10,8 @@
 			set _kmos_perf_lastclock to time:seconds.
 		} else {
 			if(time:seconds > _kmos_perf_lastclock) {
-				local deltaT = time:seconds - _kmos_perf_lastclock.
-				local sps = _kmos_perf_stepcount / deltaT.
+				local deltaT is time:seconds - _kmos_perf_lastclock.
+				local sps is _kmos_perf_stepcount / deltaT.
 				_kmos_perf_sps:push(sps).
 				set _kmos_perf_stepcount to 0.
 				set _kmos_perf_lastclock to time:seconds.
@@ -58,7 +58,7 @@
 		local texts is list().
 		local actions is list().
 		local pers_tasks is kmos_require_state("kmos_persistent_tasks", lexicon()).
-		from local i is 0 until i = _kmos_tasks:keys:length step {set i to i+1} do {
+		from {local i is 0.} until i = _kmos_tasks:keys:length step {set i to i+1.} do {
 			if(pers_tasks:contains(_kmos_tasks:keys[i])) {
 				texts:add(_kmos_tasks:keys + " [A/P]").
 			} else {
@@ -66,7 +66,7 @@
 			}
 			actions:add(kmos_edit_task@:bind(_kmos_tasks:keys[i])).
 		}
-		from local i is 0 until i = pers_tasks:keys:length step {set i to i+1} do {
+		from {local i is 0.} until i = pers_tasks:keys:length step {set i to i+1.} do {
 			if(not kmos_has_task(pers_tasks:keys[i])) {
 				texts:add(pers_tasks:keys[i] + " [P]").
 				actions:add(kmos_edit_task@:bind(pers_tasks:keys[i])).

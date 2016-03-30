@@ -84,7 +84,7 @@ function kmos_enter_mode {
 }
 
 function kmos_exit_mode {
-	local id = _kmos_mode_stack:pop().
+	local id is _kmos_mode_stack:pop().
 	if(not _kmos_mode_end[id]:call() and not _kmos_errors:empty()) {
 		kmos_enter_mode("kmos_showerrors").
 	}
@@ -398,11 +398,11 @@ function kmos_showerrors_step {
 		_kmos_errors:clear().
 	} else if(_kmos_errors:length + 2 > terminal:height) {
 		clearscreen.
-		local pos = 0.
+		local pos is 0.
 		if(_kmos_showerrors_pos = 0) {
 			print "The following errors occured:".
 		}
-		from {local i = _kmos_showerrors_pos.} until pos = terminal:height - 3 or i = _kmos_errors:length
+		from {local i is _kmos_showerrors_pos.} until pos = terminal:height - 3 or i = _kmos_errors:length
 		step {set i to i + 1. set pos to pos + 1.} do {
 			print e[i].
 		}
