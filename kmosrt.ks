@@ -169,7 +169,7 @@ function kmos_get_state {
 	if(_kmos_stored_state:contains(key)) {
 		return _kmos_stored_state[key].
 	} else {
-		kmos_add_error("key " + key " not found in stored state").
+		kmos_add_error("key " + key + " not found in stored state").
 		return false.
 	}
 }
