@@ -1,5 +1,7 @@
 @LAZYGLOBAL OFF.
 
+print "starting KMOS setup".
+
 switch to archive.
 run once kmosrt.
 run once kmos_update.

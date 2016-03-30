@@ -18,6 +18,8 @@ global _kmos_menu_page is stack().
 global _kmos_last_ag_state is list().
 global _kmos_stored_state is lexicon().
 global _kmos_edit_task is "".
+global volumes is list().
+list volumes in volumes.
 
 function kmos_add_error {
 	parameter error.
@@ -26,7 +28,7 @@ function kmos_add_error {
 	_kmos_errors:add(message).
 }
 
-function kmos_delgate_nvl {
+function kmos_delegate_nvl {
 	parameter action, nvl is true.
 	action:call().
 	return nvl.
@@ -34,13 +36,12 @@ function kmos_delgate_nvl {
 
 function kmos_ag_init {
 	from {local i is 0.} until i = 10 step {set i to i+1.} do {
-		_kmos_last_ag_state:add(false).
+		_kmos_last_ag_state:add(kmos_ag_byindex(i)).
 	}
 }
 
 function kmos_ag_byindex {
 	parameter n.
-	if(n = 0) return AG0.
 	if(n = 1) return AG1.
 	if(n = 2) return AG2.
 	if(n = 3) return AG3.
@@ -50,6 +51,7 @@ function kmos_ag_byindex {
 	if(n = 7) return AG7.
 	if(n = 8) return AG8.
 	if(n = 9) return AG9.
+	if(n = 10 or n = 0) return AG10.
 }
 
 function kmos_ag_task {
@@ -61,7 +63,7 @@ function kmos_ag_task {
 
 function kmos_checkAG {
 	parameter n.
-	return kmos_ag_byindex(n) <> _kmos_last_ag_state(n).
+	return kmos_ag_byindex(n) <> _kmos_last_ag_state[n].
 }
 	
 function kmos_get_version {
@@ -116,12 +118,12 @@ function kmos_kill_task {
 
 function kmos_has_task {
 	parameter id.
-	return _kmos_tasks:contains(id).
+	return _kmos_tasks:keys:contains(id).
 }
 
 function kmos_toggle_task {
 	parameter id, step.
-	if(_kmos_tasks:contains(id)) {
+	if(_kmos_tasks:keys:contains(id)) {
 		kmos_kill_task(id).
 	} else {
 		kmos_start_task(id, step).
@@ -130,7 +132,7 @@ function kmos_toggle_task {
 
 function kmos_taskitem_desc {
 	parameter id.
-	if(_kmos_tasks:contains(id)) {
+	if(_kmos_tasks:keys:contains(id)) {
 		return "Kill " + id.
 	} else {
 		return "Start " + id.
@@ -150,7 +152,7 @@ function kmos_mode_noop {
 
 function kmos_store_state {
 	parameter key, value.
-	if(not value:isserializable) {
+	if(false) { //not value:isserializable) {
 		kmos_add_error("state <" + key + "> = <" + value + "> is not serializable").
 	} else {
 		set _kmos_stored_state[key] to value.
@@ -166,7 +168,7 @@ function kmos_remove_state {
 
 function kmos_get_state {
 	parameter key.
-	if(_kmos_stored_state:contains(key)) {
+	if(_kmos_stored_state:keys:contains(key)) {
 		return _kmos_stored_state[key].
 	} else {
 		kmos_add_error("key " + key + " not found in stored state").
@@ -176,7 +178,7 @@ function kmos_get_state {
 
 function kmos_has_state {
 	parameter key.
-	return _kmos_stored_state:contains(key).
+	return _kmos_stored_state:keys:contains(key).
 }
 
 function kmos_require_state {
@@ -225,7 +227,7 @@ function kmos_has_persistent_task {
 		return false.
 	}
 	local pers_tasks is kmos_get_state("kmos_persistent_tasks").
-	return pers_tasks:contains(id).
+	return pers_tasks:keys:contains(id).
 }
 
 function kmos_run_once_task {
@@ -251,7 +253,7 @@ function kmos_check_equal {
 }
 
 function kmos_has_terminal {
-	return core:allevents:contains("Close Terminal").
+	return not core:allevents:contains("Open Terminal").
 }
 
 function kmos_has_boot {
@@ -331,12 +333,12 @@ function kmos_menu_step {
 	local act_texts is list().
 	local act_actions is list().
 	from { local i is 0.} until i = descs:length step {set i to i+1.} do {
-		if(descs[i]:typename() = "KOSDelegate") {
+		if(descs[i]:hassuffix("call")) {
 			act_texts:add(descs[i]:call()).
 		} else {
 			act_texts:add(descs[i]).
 		}
-		if(i < actions:length) {
+		if(i > actions:length) {
 			kmos_add_error("missing action for menu item " + act_texts[i]).
 			return false.
 		} else {
@@ -375,7 +377,7 @@ function kmos_showerrors_begin {
 	if(_kmos_errors:length + 2 <= terminal:height) {
 		if(_kmos_errors:length > 1) {
 			print "The following errors occured:".
-			for local e in _kmos_errors {
+			for e in _kmos_errors {
 				print e.
 			}
 			print "1 - Back".
@@ -424,14 +426,15 @@ function kmos_main_menu {
 }
 
 function kmos_load_all {
+	print "loading scripts...".
 	kmos_load_state().
-	for local v in volumes {
-		if(not v = archive) {
+	for v in volumes {
+		if(not (v = archive)) {
 			switch to v.
 			if(v:exists("kmos_load")) {
 				run kmos_load.
 			}
-			for local f in list("kmos_ui", "kmos_update") {
+			for f in list("kmos_ui", "kmos_update") {
 				if(v:exists(f)) {
 					execute("run once " + f).
 				}
@@ -442,20 +445,26 @@ function kmos_load_all {
 }
 
 function kmos_main {
-	kmos_add_mode_withitem("kmos_showerrors", "Check Errors", kmos_mode_showerrors_begin@, kmos_showerrors_step@, kmos_noop@).
+	print "KMOS main".
+	kmos_add_mode_withitem("kmos_showerrors", "Check Errors", kmos_showerrors_begin@, kmos_showerrors_step@, kmos_mode_noop@).
 	kmos_add_mode("kmos_main", kmos_menu_begin@, kmos_main_menu@, kmos_menu_end@).
 	kmos_ag_init().
 	kmos_enter_mode(kmos_require_state("kmos_mainmode", "kmos_main")).
 	kmos_start_task("kmos_ag", kmos_ag_task@).
 	local pers_tasks is kmos_require_state("kmos_persistent_tasks", lexicon()).
-	for local t in pers_tasks:keys {
+	for t in pers_tasks:keys {
 		kmos_start_task(t, pers_tasks[t]).
 	}
+	local initdelay is 10.
 	until _kmos_mode_stack:empty() {
-		if(not _kmos_mode_step[_kmos_mode_stack:peek()]:call() and not _kmos_errors:empty()) {
-			kmos_enter_mode("kmos_showerrors").
+		if(initdelay = 0) {
+			if(not _kmos_mode_step[_kmos_mode_stack:peek()]:call() and not _kmos_errors:empty()) {
+				kmos_enter_mode("kmos_showerrors").
+			}
+		} else {
+			set initdelay to initdelay-1.
 		}
-		for local t in _kmos_tasks:values {
+		for t in _kmos_tasks:values {
 			if(not t() and not _kmos_errors:empty()) {
 				kmos_enter_mode("kmos_showerrors").
 				break.

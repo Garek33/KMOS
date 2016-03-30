@@ -11,8 +11,8 @@
 	local main_actions is list().
 	
 	function have_any_core {
-		for local vol in volumes {
-			for local file in core_runtime {
+		for vol in volumes {
+			for file in core_runtime {
 				if(not vol:exists(file)) {
 					return false.
 				}
@@ -51,7 +51,7 @@
 	
 	function core_desc {
 		local ext is " - installed [ksm]".
-		for local fname in core_runtime {
+		for fname in core_runtime {
 			if(not core:volume:exists(fname)) {
 				set ext to " - not installed".
 			} else if(not core:volume:exists(fname + ".ksm")) {
@@ -63,14 +63,14 @@
 	
 	function core_action {
 		local act is 2. //0 - copy, 1 - compile, 2 - remove
-		for local fname in core_runtime {
+		for fname in core_runtime {
 			if(not core:volume:exists(fname)) {
 				set act to 0.
 			} else if(not core:volume:exists(fname + ".ksm")) {
 				set ext to 1.
 			}
 		}
-		for local fname in core_runtime {
+		for fname in core_runtime {
 			if(act = 0) {
 				copy fname + ".ks" from archive.
 			} else if(act = 1) {
@@ -98,7 +98,13 @@
 		return kmos_menu_step("KMOS Updater",main_texts,main_actions).
 	}
 	
-	kmos_add_mode_withitem("kmos_update_main", "Update", main_begin@, main_step@, kmos_menu_end@).
+	function main_end {
+		main_texts:clear().
+		main_actions:clear().
+		return kmos_menu_end().
+	}
+	
+	kmos_add_mode_withitem("kmos_update_main", "Update", main_begin@, main_step@, main_end@).
 	
 	function runtime_begin {
 		feature_texts:add(core_desc@).
@@ -114,11 +120,21 @@
 		return kmos_menu_step("KMOS Updater",feature_texts,feature_actions).
 	}
 	
-	kmos_add_mode("kmos_update_runtime", runtime_begin@, runtime_step@, kmos_menu_end@).
+	function runtime_end {
+		feature_texts:clear().
+		feature_actions:clear().
+		return kmos_menu_end().
+	}
+	
+	kmos_add_mode("kmos_update_runtime", runtime_begin@, runtime_step@, runtime_end@).
 	
 	function scripts_begin {
-		for fname in archive:files:keys {
-			if(not core_runtime:contains(fname) and not fname:contains("kmos_")) {
+		for file in archive:files:keys {
+			local fname is file.
+			if(file:findlast(".") > 0) {
+				set fname to file:substring(0,file:findlast(".")).
+			}
+			if(not core_runtime:contains(fname) and not fname:contains("kmos_") and not (fname = "boot_kmossetup.ks")) {
 				script_texts:add(setup_desc@:bind(fname,fname)).
 				script_actions:add(setup_action@:bind(fname)).
 			}
@@ -130,7 +146,13 @@
 		return kmos_menu_step("KMOS_Updater",script_texts,script_actions).
 	}
 	
-	kmos_add_mode("kmos_update_scripts", scripts_begin@, scripts_step@, kmos_menu_end@).
+	function scripts_end {
+		script_actions:clear().
+		script_texts:clear().
+		return kmos_menu_end().
+	}
+	
+	kmos_add_mode("kmos_update_scripts", scripts_begin@, scripts_step@, scripts_end@).
 	
 	function finalize {
 		parameter install_core is false.
@@ -142,8 +164,8 @@
 		if(core:volume:exists("kmos_load.ks")) {
 			delete kmos_load.ks.
 		}
-		for local fname in core:volume:files:keys {
-			if(not core_runtime:contains(fname)) {
+		for fname in core:volume:files:keys {
+			if(fname:contains(".ks") and not core_runtime:contains(fname) and (not list("boot_kmossetup.ks","kmos_boot.ks"):contains(fname))) {
 				log "run once " + fname + "." to "kmos_load.ks".
 			}
 		}

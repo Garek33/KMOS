@@ -31,7 +31,7 @@
 		print "Version: " + kmos_get_version.
 		
 		local sps_avg is 0.
-		for local v in _kmos_perf_sps {
+		for v in _kmos_perf_sps {
 			set sps_avg to sps_avg + v.
 		}
 		set sps_avg to sps_avg / _kmos_perf_sps:length.
@@ -59,7 +59,7 @@
 		local actions is list().
 		local pers_tasks is kmos_require_state("kmos_persistent_tasks", lexicon()).
 		from {local i is 0.} until i = _kmos_tasks:keys:length step {set i to i+1.} do {
-			if(pers_tasks:contains(_kmos_tasks:keys[i])) {
+			if(pers_tasks:keys:contains(_kmos_tasks:keys[i])) {
 				texts:add(_kmos_tasks:keys + " [A/P]").
 			} else {
 				texts:add(_kmos_tasks:keys[i] + " [A]").
@@ -105,7 +105,7 @@
 		return kmos_menu_step(title, texts, actions).
 	}
 	
-	kmos_add_mode_withitem("kmos_status", "Show Status", kmos_mode_noop@, kmos_status_step@, kmos_noop@).
+	kmos_add_mode_withitem("kmos_status", "Show Status", kmos_mode_noop@, kmos_status_step@, kmos_mode_noop@).
 	kmos_add_mode_withitem("kmos_taskmanager", "Taskmanager", kmos_menu_begin@, kmos_taskmanager_step@, kmos_menu_end@).
 	kmos_add_item(kmos_toggle_desc@:bind(kmos_has_boot@, "Unset Boot", "Set Boot"), kmos_delegate_nvl@:bind(kmos_toggle_boot@)).
 	kmos_add_item("Restart", kmos_delegate_nvl@:bind(kmos_restart@)).
