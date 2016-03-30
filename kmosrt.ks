@@ -330,7 +330,7 @@ function kmos_menu_step {
 	}
 	local act_texts is list().
 	local act_actions is list().
-	from { local i is 0.} until i = descs:length step {set i to i+1.} {
+	from { local i is 0.} until i = descs:length step {set i to i+1.} do {
 		if(descs[i]:typename() = "KOSDelegate") {
 			act_texts:add(descs[i]:call()).
 		} else {
