@@ -133,6 +133,10 @@
 	kmos_add_mode("kmos_update_scripts", scripts_begin@, scripts_step@, kmos_menu_end@).
 	
 	function finalize {
+		parameter install_core is false.
+		if(install_core) {
+			core_action().
+		}
 		copy kmos_boot from archive.
 		set core:bootfilename to kmos_require_state("kmos_bootfile", "kmos_boot").
 		if(volume 1:exists("kmos_load.ks")) {

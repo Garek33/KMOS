@@ -1,4 +1,4 @@
-@lazyglobals off
+@LAZYGLOBAL OFF.
 
 switch to archive.
 run once kmosrt.

@@ -1,4 +1,4 @@
-@lazyglobals off.
+@LAZYGLOBAL OFF.
 
 for local v in volumes {
 	if v:exists(kmosrt) {

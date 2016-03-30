@@ -431,7 +431,7 @@ function kmos_load_all {
 			if(v:exists("kmos_load")) {
 				run kmos_load.
 			}
-			for local f in list("kmos_ui") {
+			for local f in list("kmos_ui", "kmos_update") {
 				if(v:exists(f)) {
 					execute("run once " + f).
 				}
