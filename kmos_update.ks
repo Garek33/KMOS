@@ -23,9 +23,9 @@
 	
 	function setup_desc {
 		parameter base, file.
-		if(volume 1:exists(file + ".ks")) {
+		if(core:volume:exists(file + ".ks")) {
 			return base + " - installed [ks]".
-		} else if(volume 1:exists(file + ".ksm")) {
+		} else if(core:volume:exists(file + ".ksm")) {
 			return base + " - installed [ksm]".
 		} else {
 			return base + " - not installed".
@@ -34,10 +34,10 @@
 	
 	function setup_action {
 		parameter file.
-		if(volume 1:exists(file + ".ks")) {
+		if(core:volume:exists(file + ".ks")) {
 			compile file.
 			delete file + ".ks".
-		} else if(volume 1:exists(file + ".ksm")) {
+		} else if(core:volume:exists(file + ".ksm")) {
 			delete file + ".ksm".
 		} else {
 			if(not archive:exists(file)) {
@@ -52,9 +52,9 @@
 	function core_desc {
 		local ext is " - installed [ksm]".
 		for local fname in core_runtime {
-			if(not volume 1:exists(fname)) {
+			if(not core:volume:exists(fname)) {
 				set ext to " - not installed".
-			} else if(not volume 1:exists(fname + ".ksm")) {
+			} else if(not core:volume:exists(fname + ".ksm")) {
 				set ext to " - installed [ks]".
 			}
 		}
@@ -64,9 +64,9 @@
 	function core_action {
 		local act is 2. //0 - copy, 1 - compile, 2 - remove
 		for local fname in core_runtime {
-			if(not volume 1:exists(fname)) {
+			if(not core:volume:exists(fname)) {
 				set act to 0.
-			} else if(not volume 1:exists(fname + ".ksm")) {
+			} else if(not core:volume:exists(fname + ".ksm")) {
 				set ext to 1.
 			}
 		}
@@ -139,10 +139,10 @@
 		}
 		copy kmos_boot from archive.
 		set core:bootfilename to kmos_require_state("kmos_bootfile", "kmos_boot").
-		if(volume 1:exists("kmos_load.ks")) {
+		if(core:volume:exists("kmos_load.ks")) {
 			delete kmos_load.ks.
 		}
-		for local fname in volume 1:files:keys {
+		for local fname in core:volume:files:keys {
 			if(not core_runtime:contains(fname)) {
 				log "run once " + fname + "." to "kmos_load.ks".
 			}

@@ -190,7 +190,7 @@ function kmos_require_state {
 }
 
 function kmos_load_state {
-	if(volume 1:exists("kmos_state.json")) {
+	if(core:volume:exists("kmos_state.json")) {
 		set _kmos_stored_state to readjson("kmos_state.json").
 	}
 }
