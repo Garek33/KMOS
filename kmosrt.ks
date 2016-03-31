@@ -15,7 +15,8 @@ global _kmos_perf_lastclock is 0.
 global _kmos_perf_stepcount is 0.
 global _kmos_perf_sps is queue().
 global _kmos_menu_page is stack().
-global _kmos_last_ag_state is list().
+global _kmos_ag_laststate is list().
+global _kmos_ag_currentstate is list().
 global _kmos_stored_state is lexicon().
 global _kmos_edit_task is "".
 global volumes is list().
@@ -36,8 +37,9 @@ function kmos_delegate_nvl {
 
 function kmos_ag_init {
 	from {local i is 0.} until i = 10 step {set i to i+1.} do {
-		_kmos_last_ag_state:add(kmos_ag_byindex(i)).
+		_kmos_ag_currentstate:add(kmos_ag_byindex(i)).
 	}
+	set _kmos_ag_laststate to _kmos_ag_currentstate:copy.
 }
 
 function kmos_ag_byindex {
@@ -55,15 +57,16 @@ function kmos_ag_byindex {
 }
 
 function kmos_ag_task {
+	set _kmos_ag_laststate to _kmos_ag_currentstate:copy.
 	from {local i is 0.} until i = 10 step {set i to i+1.} do {
-		set _kmos_last_ag_state[i] to kmos_ag_byindex(i).
+		set _kmos_ag_currentstate[i] to kmos_ag_byindex(i).
 	}
 	return true.
 }
 
 function kmos_checkAG {
 	parameter n.
-	return kmos_ag_byindex(n) <> _kmos_last_ag_state[n].
+	return _kmos_ag_laststate[n] <> _kmos_ag_currentstate[n].
 }
 	
 function kmos_get_version {
