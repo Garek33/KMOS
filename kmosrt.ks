@@ -1,5 +1,9 @@
 @LAZYGLOBAL OFF.
 
+//!id=KMOS Core
+//!files=kmosrt,lib_exec
+//!category=KMOS Runtime
+
 run once lib_exec.
 
 global _kmos_item_desc is list().
@@ -81,10 +85,15 @@ function kmos_add_item {
 
 function kmos_enter_mode {
 	parameter id.
-	if(_kmos_mode_begin[id]:call()) {
-		_kmos_mode_stack:push(id).
-	} else if(not _kmos_errors:empty()) {
+	if(not _kmos_mode_begin:haskey(id)) {
+		kmos_add_error("mode <" + id + "> not found").
 		kmos_enter_mode("kmos_showerrors").
+	} else {
+		if(_kmos_mode_begin[id]:call()) {
+			_kmos_mode_stack:push(id).
+		} else if(not _kmos_errors:empty()) {
+			kmos_enter_mode("kmos_showerrors").
+		}
 	}
 }
 
@@ -259,6 +268,10 @@ function kmos_has_terminal {
 	return not core:allevents:contains("Open Terminal").
 }
 
+function kmos_has_archive {
+	return (not addons:rt:available or addons:rt:haskscconnection(ship)).
+}
+
 function kmos_has_boot {
 	return (core:bootfilename = "kmos_boot").
 }
@@ -329,7 +342,7 @@ function kmos_menu_end {
 }
 
 function kmos_menu_step {
-	parameter title, descs, actions.
+	parameter title, descs, actions, backtext is "back".
 	if(not kmos_has_terminal()) {
 		return true. //only operate menu on active terminal
 	}
@@ -348,8 +361,10 @@ function kmos_menu_step {
 			act_actions:add(actions[i]).
 		}
 	}
-	act_texts:add("exit").
-	act_actions:add(kmos_exit_mode@).
+	if(backtext <> "") {
+		act_texts:add(backtext).
+		act_actions:add(kmos_exit_mode@).
+	}
 	
 	local pagesize is min(terminal:height-1, 10).
 	local page is _kmos_menu_page:peek().
@@ -358,15 +373,17 @@ function kmos_menu_step {
 			return false.
 		}
 	} else {
-		local itemspp is terminal:height - 3.
+		local itemspp is min(terminal:height - 3, 8).
 		local ptexts is list().
 		local pactions is list().
-		from {local i is page * itemspp.} until i = (page+1) * itemspp step {set i to i+1.} do {
+		from {local i is page * itemspp.} until i = (page+1) * itemspp or i = act_texts:length step {set i to i+1.} do {
 			ptexts:add(act_texts[i]).
 			pactions:add(act_actions[i]).
 		}
-		ptexts:add("next page", kmos_menu_nextpage@:bind(ceiling(act_texts:length/itemspp))).
-		ptexts:add("previous page", kmos_menu_prevpage@).
+		ptexts:add("next page").
+		pactions:add(kmos_menu_nextpage@:bind(ceiling(act_texts:length/itemspp))).
+		ptexts:add("previous page").
+		pactions:add(kmos_menu_prevpage@).
 		if(not kmos_menu_singlepage(title, ptexts, pactions)) {
 			return false.
 		}

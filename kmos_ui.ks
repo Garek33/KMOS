@@ -1,5 +1,9 @@
 @LAZYGLOBAL OFF.
 
+//!id=KMOS Control UI
+//!dependencies=KMOS Core
+//!category=KMOS Runtime
+
 {
 	function kmos_restart {
 		reboot.
@@ -107,7 +111,6 @@
 	
 	kmos_add_mode_withitem("kmos_status", "Show Status", kmos_mode_noop@, kmos_status_step@, kmos_mode_noop@).
 	kmos_add_mode_withitem("kmos_taskmanager", "Taskmanager", kmos_menu_begin@, kmos_taskmanager_step@, kmos_menu_end@).
-	kmos_add_item(kmos_toggle_desc@:bind(kmos_has_boot@, "Unset Boot", "Set Boot"), kmos_delegate_nvl@:bind(kmos_toggle_boot@)).
 	kmos_add_item("Restart", kmos_delegate_nvl@:bind(kmos_restart@)).
 	kmos_add_mode("kmos_edit_task", kmos_menu_begin@, kmos_edit_task_step@, kmos_menu_step@).
 	kmos_start_task("kmos_perf", kmos_perf_task@).

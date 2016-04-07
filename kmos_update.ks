@@ -1,190 +1,367 @@
 @LAZYGLOBAL OFF.
 
+//!id=KMOS Updater
+//!category=KMOS Runtime
+//!dependencies=KMOS Core
+
 {
-	local core_runtime is list("kmosrt", "lib_exec").
-	local runtime_features is lexicon("Control UI", "kmos_ui", "Updater", "kmos_update").
-	local script_texts is list().
-	local script_actions is list().
-	local feature_texts is list().
-	local feature_actions is list().
-	local main_texts is list().
-	local main_actions is list().
+	local available_pkg is lexicon().
+	local installed_pkg is lexicon().
+	local categories is list().
+	local bootorder is list().
+	local listfields is list("files","dependencies").
 	
-	function have_any_core {
-		for vol in volumes {
-			for file in core_runtime {
-				if(not vol:exists(file)) {
-					return false.
+	//returns a list(base filename, extension)
+	function split_filename {
+		parameter filename.
+		local pos is filename:findlast(".").
+		if(pos > 0) {
+			return list(filename:substring(0,pos), filename:substring(pos +1,filename:length - pos -1)).
+		} else {
+			return list(filename, "").
+		}
+	}
+	
+	function parse_value {
+		parameter line.
+		local kv is line:split("=").
+		if(kv:length <> 2) {
+			kmos_add_error("could not parse line: " + line).
+			return list().
+		}
+		local key is kv[0].
+		local val is kv[1].
+		if(listfields:contains(key)) {
+			set val to kv[1]:split(",").
+		}
+		return list(key,val).
+	}
+	
+	function add_pkg {
+		parameter pkg, filename.
+		//mandatory fields
+		local basename is split_filename(filename)[0].
+		if(not pkg:haskey("id")) {
+			pkg:add("id",basename).
+		}
+		if(not pkg:haskey("files")) {
+			pkg:add("files",list(basename)).
+		}
+		if(not pkg:haskey("category")) {
+			pkg:add("category","Uncategorized").
+		}
+		if(not pkg:haskey("dependencies")) {
+			pkg:add("dependencies",list()).
+		}
+		if(not pkg:haskey("source")) {
+			pkg:add("source",archive).
+		}
+		available_pkg:add(pkg["id"],pkg).
+		if(not categories:contains(pkg["category"])) {
+			categories:add(pkg["category"]).
+		}
+	}
+	
+	function scan_kpm {
+		parameter filename.
+		local pkg is lexicon().
+		local lines is open(filename):readall:string:split(char(10)).
+		for line in lines {
+			local kv is parse_value(line).
+			if(kv:length = 2) {
+				pkg:add(kv[0],kv[1]).
+			}
+		}
+		add_pkg(pkg, filename).
+	}
+	
+	function scan_ks {
+		parameter filename.
+		local pkg is lexicon().
+		local iter is open(filename):readall:iterator.
+		local ispkg is false.
+		until not iter:next {
+			local line is iter:value.
+			local pos is line:find("//!").
+			if(pos >= 0) {
+				local code is line:substring(pos +3, line:length - pos -3).
+				if(code:contains("=")) { //check it isn't non-value to force entry with default metadata
+					local kv is parse_value(code).
+					if(kv:length = 2) {
+						pkg:add(kv[0],kv[1]).
+					}
+				}
+				set ispkg to true.
+			}
+		}
+		if(ispkg) add_pkg(pkg, filename).
+	}
+	
+	function scan_file {
+		parameter filename, source is archive.
+		switch to source.
+		local prts is split_filename(filename).
+		if(prts[1] = "ks") {
+			scan_ks(filename).
+		} else if(prts[1] = "kpm") {
+			scan_kpm(filename).
+		}
+		switch to 1.
+	}
+	
+	function check_dep_consistency {
+		local has_error is false.
+		for pkg in available_pkg:values {
+			for depname in pkg["dependencies"] {
+				if(not available_pkg:haskey(depname)) {
+					kmos_add_error("package consistency check failed: dependency <" + depname + "> of <" + pkg["id"] + "> not available").
+					set has_error to true.
 				}
 			}
 		}
-		return true.
+		return not has_error.
 	}
 	
-	function setup_desc {
-		parameter base, file.
-		if(core:volume:exists(file + ".ks")) {
-			return base + " - installed [ks]".
-		} else if(core:volume:exists(file + ".ksm")) {
-			return base + " - installed [ksm]".
-		} else {
-			return base + " - not installed".
-		}
-	}
-	
-	function setup_action {
-		parameter file.
-		if(core:volume:exists(file + ".ks")) {
-			compile file.
-			delete file + ".ks".
-		} else if(core:volume:exists(file + ".ksm")) {
-			delete file + ".ksm".
-		} else {
-			if(not archive:exists(file)) {
-				kmos_add_error("Script " + file + " missing from archive").
-				return false.
-			}
-			copy file + ".ks" from archive.
-		}
-		return true.
-	}
-	
-	function core_desc {
-		local ext is " - installed [ksm]".
-		for fname in core_runtime {
-			if(not core:volume:exists(fname)) {
-				set ext to " - not installed".
-			} else if(not core:volume:exists(fname + ".ksm")) {
-				set ext to " - installed [ks]".
+	function add_bootorder {
+		parameter pkg.
+		local todo is false.
+		for fname in pkg["files"] {
+			if(not bootorder:contains(fname)) {
+				set todo to true.
+				break.
 			}
 		}
-		return "Core Runtime" + ext.
-	}
-	
-	function core_action {
-		local act is 2. //0 - copy, 1 - compile, 2 - remove
-		for fname in core_runtime {
-			if(not core:volume:exists(fname)) {
-				set act to 0.
-			} else if(not core:volume:exists(fname + ".ksm")) {
-				set ext to 1.
-			}
-		}
-		for fname in core_runtime {
-			if(act = 0) {
-				copy fname + ".ks" from archive.
-			} else if(act = 1) {
-				compile fname.
-				delete fname + ".ks".
-			} else {
-				delete fname + ".ksm".
-			}
-		}
-		return true.
-	}
-	
-	function main_begin {
-		main_texts:add("Select runtime features").
-		main_actions:add(kmos_delegate_nvl@:bind(kmos_enter_mode@:bind("kmos_update_runtime"))).
-		main_texts:add("Select additional scripts").
-		main_actions:add(kmos_delegate_nvl@:bind(kmos_enter_mode@:bind("kmos_update_scripts"))).
-		main_texts:add("Finalize and reboot").
-		main_actions:add(kmos_delegate_nvl@:bind(kmos_enter_mode@:bind("kmos_update_finalize"))).
+		if(not todo) return.
 		
-		return kmos_menu_begin().
-	}
-	
-	function main_step {
-		return kmos_menu_step("KMOS Updater",main_texts,main_actions).
-	}
-	
-	function main_end {
-		main_texts:clear().
-		main_actions:clear().
-		return kmos_menu_end().
-	}
-	
-	kmos_add_mode_withitem("kmos_update_main", "Update", main_begin@, main_step@, main_end@).
-	
-	function runtime_begin {
-		feature_texts:add(core_desc@).
-		feature_actions:add(core_action@).
-		for desc in runtime_features:keys {
-			feature_texts:add(setup_desc@:bind(desc, runtime_features[desc])).
-			feature_actions:add(setup_action@:bind(runtime_features[desc])).
+		for dep in pkg["dependencies"] {
+			add_bootorder(available_pkg[dep]).
 		}
-		return kmos_menu_begin().
+		for fname in pkg["files"] {
+			if(not bootorder:contains(fname)) bootorder:add(fname).
+		}
 	}
 	
-	function runtime_step {
-		return kmos_menu_step("KMOS Updater",feature_texts,feature_actions).
-	}
-	
-	function runtime_end {
-		feature_texts:clear().
-		feature_actions:clear().
-		return kmos_menu_end().
-	}
-	
-	kmos_add_mode("kmos_update_runtime", runtime_begin@, runtime_step@, runtime_end@).
-	
-	function scripts_begin {
-		for file in archive:files:keys {
-			local fname is file.
-			if(file:findlast(".") > 0) {
-				set fname to file:substring(0,file:findlast(".")).
+	function uninstall {
+		parameter pkg.
+		for fname in pkg["files"] {
+			if(core:volume:exists(fname + ".ks")) {
+				core:volume:delete(fname + ".ks").
 			}
-			if(not core_runtime:contains(fname) and not fname:contains("kmos_") and not (fname = "boot_kmossetup.ks")) {
-				script_texts:add(setup_desc@:bind(fname,fname)).
-				script_actions:add(setup_action@:bind(fname)).
+			if(core:volume:exists(fname + ".ksm")) {
+				core:volume:delete(fname + ".ksm").
 			}
 		}
-		return kmos_menu_begin.
+		if(installed_pkg:haskey(pkg["id"])) {
+			installed_pkg:remove(pkg["id"]).
+		}
+		return true.
 	}
 	
-	function scripts_step {
-		return kmos_menu_step("KMOS_Updater",script_texts,script_actions).
+	function install {
+		parameter pkg, compile, inst_deps, cls is true.
+		if(cls) clearscreen.
+		print "installing " + pkg["id"].
+		if(installed_pkg:haskey(pkg["id"])) {
+			uninstall(pkg).
+		}
+		if(inst_deps) {
+			print "checking dependencies".
+			for dep in pkg["dependencies"] {
+				print "<" + dep + ">".
+				local required is false.
+				for fname in available_pkg[dep]["files"] {
+					if(not core:volume:exists(fname)) {
+						set required to true.
+						break.
+					}
+				}
+				if(required) install(available_pkg[dep],compile,true,false).
+			}
+			print "dependencies done, back at " + pkg["id"].
+		}
+		for fname in pkg["files"] {
+			print "<" + fname + ">".
+			if(compile) {
+				switch to pkg["source"].
+				compile fname + ".ks" to fname + ".ksm".
+				switch to 1.
+				copy fname + ".ksm" from pkg["source"].
+			} else {
+				copy fname + ".ks" from pkg["source"].
+			}
+		}
+		if(not installed_pkg:haskey(pkg["id"])) {
+			installed_pkg:add(pkg["id"],pkg).
+		}
+		set installed_pkg[pkg["id"]]["compiled"] to compile.
+		return true.
 	}
 	
-	function scripts_end {
-		script_actions:clear().
-		script_texts:clear().
-		return kmos_menu_end().
+	local main_labels is list().
+	local main_actions is list().
+	local current_cat is "".
+
+	function choose_cat {
+		parameter cat.
+		set current_cat to cat.
+		kmos_enter_mode("kmos_updater_category").
+		return true.
 	}
-	
-	kmos_add_mode("kmos_update_scripts", scripts_begin@, scripts_step@, scripts_end@).
 	
 	function finalize {
-		parameter install_core is false.
-		if(install_core) {
-			core_action().
+		bootorder:clear().
+		for pkg in installed_pkg:values {
+			add_bootorder(pkg).
 		}
-		copy kmos_boot from archive.
-		set core:bootfilename to kmos_require_state("kmos_bootfile", "kmos_boot").
-		if(core:volume:exists("kmos_load.ks")) {
-			delete kmos_load.ks.
+		log "" to kmos_boot_stage2.ks.
+		delete kmos_boot_stage2.ks.
+		log "{" +
+			"local vol is list(). " +
+			"list volumes in vol. " to kmos_boot_stage2.ks.
+		for fname in bootorder {
+			log "for v in vol {" +
+				"if(v:exists(" + char(34) + fname + char(34) + ")){" +
+				"print " + char(34) + "<" + fname + ">" + char(34) + ". " +
+				"run once " + fname + ". " +
+				"break.}}" to kmos_boot_stage2.ks.
 		}
-		for fname in core:volume:files:keys {
-			if(fname:contains(".ks") and not core_runtime:contains(fname) and (not list("boot_kmossetup.ks","kmos_boot.ks"):contains(fname))) {
-				log "run once " + fname + "." to "kmos_load.ks".
-			}
-		}
-		if(kmos_require_state("kmos_mainmode", "kmos_main") = "kmos_update_main") {
+		log "}" to kmos_boot_stage2.ks.
+		writejson(installed_pkg,"kmos_pkg.json").
+		if(kmos_require_state("kmos_mainmode", "kmos_main") = "kmos_updater_main") {
 			kmos_store_state("kmos_mainmode", "kmos_main").
 		}
 		reboot.
 	}
 	
-	function finalize_step {
-		if(have_any_core) {
-			finalize().
-			return true.
-		} else {
-			local texts is list("Ignore and Continue", "Install and Continue", "Back").
-			local actions is list(kmos_delegate_nvl@:bind(finalize@),kmos_delegate_nvl@:bind(finalize@:bind(true)),kmos_delegate_nvl@:bind(kmos_exit_mode@)).
-			return kmos_menu_step("NO CORE RUNTIME FOUND!", texts, actions).
+	function main_begin {
+		//clearscreen.
+		print "loading package management".
+		if(exists("kmos_pkg.json")) {
+			set installed_pkg to readjson("kmos_pkg.json").
 		}
+		if(kmos_has_archive) {
+			print "scanning files".
+			for fname in archive:files:keys {
+				print "<" + fname + ">".
+				scan_file(fname).
+			}
+		} else {
+			print "archive unreacheable, scanning local volumes".
+			for v in volumes {
+				switch to v.
+				if(v:exists("kmos_pkg.json")) {
+					local other_pkgs is readjson("kmos_pkg.json").
+					for id in other_pkgs:keys {
+						if(not available_pkg:haskey(id)) {
+							available_pkg:add(id,other_pkgs[id]).
+							available_pkg[id]:add("source",v).
+						}
+					}
+				}
+			}
+			switch to 1.
+		}
+		if(not _kmos_errors:empty or not check_dep_consistency) {
+			return false.
+		}
+		for cat in categories {
+			main_labels:add(cat).
+			main_actions:add(choose_cat@:bind(cat)).
+		}
+		main_labels:add(kmos_toggle_desc@:bind(kmos_has_boot@, "Unset Boot", "Set Boot")).
+		main_actions:add(kmos_delegate_nvl@:bind(kmos_toggle_boot@)).
+		main_labels:add("finalize and reboot").
+		main_actions:add(finalize@).
+		return kmos_menu_begin.
 	}
 	
-	kmos_add_mode("kmos_update_finalize", kmos_menu_begin@, finalize_step@, kmos_menu_end@).
+	function main_step {
+		return kmos_menu_step("KMOS Updater",main_labels, main_actions).
+	}
+	
+	function main_end {
+		main_labels:clear.
+		main_actions:clear.
+		return kmos_menu_end.
+	}
+	
+	kmos_add_mode_withitem("kmos_updater_main", "KMOS Updater", main_begin@, main_step@, main_end@).
+	
+	local category_labels is list().
+	local category_actions is list().
+	local current_pkg is lexicon().
+	
+	function edit_pkg {
+		parameter pkg.
+		set current_pkg to pkg.
+		kmos_enter_mode("kmos_updater_pkg").
+		return true.
+	}
+	
+	function category_begin {
+		for pkg in available_pkg:values {
+			if(pkg["category"] = current_cat) {
+				category_labels:add(pkg["id"]).
+				category_actions:add(edit_pkg@:bind(pkg)).
+			}
+		}
+		return kmos_menu_begin.
+	}
+	
+	function category_step {
+		return kmos_menu_step(current_cat,category_labels,category_actions).
+	}
+	
+	function category_end {
+		category_labels:clear.
+		category_actions:clear.
+		return kmos_menu_end.
+	}
+	
+	kmos_add_mode("kmos_updater_category", category_begin@, category_step@, category_end@).
+	
+	function pkg_begin {
+		return kmos_menu_begin.
+	}
+	
+	function pkg_step {
+		if(not available_pkg:haskey(current_pkg["id"]) and not installed_pkg:haskey(current_pkg["id"])) {
+			kmos_exit_mode.
+			return true.
+		}
+		local status is "uninst".
+		if(installed_pkg:haskey(current_pkg["id"])) {
+			if(installed_pkg[current_pkg["id"]]["compiled"]) {
+				set status to "compiled".
+			} else {
+				set status to "installed".
+			}
+		}
+		local labels is list().
+		local actions is list().
+		if(status <> "uninst") {
+			labels:add("remove").
+			actions:add(uninstall@:bind(current_pkg)).
+		}
+		if(status <> "installed") {
+			labels:add("install (source, with dependencies)").
+			actions:add(install@:bind(current_pkg,false,true)).
+			labels:add("install (source, w/o dependencies)").
+			actions:add(install@:bind(current_pkg,false,false)).
+		}
+		if(status <> "compiled") {
+			labels:add("install (compiled, with dependencies)").
+			actions:add(install@:bind(current_pkg,true,true)).
+			labels:add("install (compiled, w/o dependencies)").
+			actions:add(install@:bind(current_pkg,true,false)).
+		}
+		local title_ext is lexicon("uninst", " - not installed", "installed", " - installed (source)", "compiled", " - installed (compiled)").
+		return kmos_menu_step(current_pkg["id"] + title_ext[status], labels, actions).
+	}
+	
+	function pkg_end {
+		return kmos_menu_end.
+	}
+	
+	kmos_add_mode("kmos_updater_pkg", pkg_begin@, pkg_step@, pkg_end@).
 }
