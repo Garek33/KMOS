@@ -29,12 +29,10 @@
 			kmos_add_error("could not parse line: " + line).
 			return list().
 		}
-		local key is kv[0].
-		local val is kv[1].
 		if(listfields:contains(key)) {
-			set val to kv[1]:split(",").
+			set kv[1] to kv[1]:split(",").
 		}
-		return list(key,val).
+		return kv.
 	}
 	
 	function add_pkg {
@@ -107,6 +105,54 @@
 			scan_kpm(filename).
 		}
 		switch to 1.
+	}
+	
+	function read_installed
+	{
+		parameter vol.
+		switch to vol.
+		local inst is lexicon().
+		local pkg is list().
+		local iter is open("installed_pkg"):readall:iterator.
+		until not iter:next {
+			local line is iter:value.
+			if(line = "-----") {
+				inst:add(pkg["id"],pkg).
+				set pkg to list().
+			} else {
+				local kv is parse_value(line).
+				if(kv:length = 2) {
+					pkg:add(kv[0],kv[1]).
+				}
+			}
+		}
+		switch to 1.
+		return inst.
+	}
+	
+	function write_installed
+	{
+		if(exists("installed_pkg")) {
+			delete("installed pkg").
+		}
+		for pkg in installed_pkg:values {
+			for key in pkg:keys {
+				if(key = source) {
+					//ignore
+				} else if (listfields:contains(key)) {
+					local line is key + "=".
+					local sep is "".
+					for val in pkg[key] {
+						set line to line + sep + val.
+						set sep to ",".
+					}
+					log line to "installed_pkg".
+				} else {
+					log key + "=" + pkg[key] to "installed_pkg".
+				}
+			}
+			log "-----" to installed_pkg.
+		}
 	}
 	
 	function check_dep_consistency {
@@ -226,7 +272,7 @@
 				"break.}}" to kmos_boot_stage2.ks.
 		}
 		log "}" to kmos_boot_stage2.ks.
-		writejson(installed_pkg,"kmos_pkg.json").
+		write_installed().
 		if(kmos_require_state("kmos_mainmode", "kmos_main") = "kmos_updater_main") {
 			kmos_store_state("kmos_mainmode", "kmos_main").
 		}
@@ -237,7 +283,7 @@
 		//clearscreen.
 		print "loading package management".
 		if(exists("kmos_pkg.json")) {
-			set installed_pkg to readjson("kmos_pkg.json").
+			set installed_pkg to read_installed().
 		}
 		if(kmos_has_archive) {
 			print "scanning files".
@@ -248,14 +294,11 @@
 		} else {
 			print "archive unreacheable, scanning local volumes".
 			for v in volumes {
-				switch to v.
-				if(v:exists("kmos_pkg.json")) {
-					local other_pkgs is readjson("kmos_pkg.json").
-					for id in other_pkgs:keys {
-						if(not available_pkg:haskey(id)) {
-							available_pkg:add(id,other_pkgs[id]).
-							available_pkg[id]:add("source",v).
-						}
+				local other_pkgs is read_installed(v).
+				for id in other_pkgs:keys {
+					if(not available_pkg:haskey(id)) {
+						available_pkg:add(id,other_pkgs[id]).
+						available_pkg[id]:add("source",v).
 					}
 				}
 			}

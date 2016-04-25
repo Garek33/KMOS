@@ -13,7 +13,7 @@
 		if(_kmos_perf_lastclock = 0) {
 			set _kmos_perf_lastclock to time:seconds.
 		} else {
-			if(time:seconds > _kmos_perf_lastclock) {
+			if(time:seconds > _kmos_perf_lastclock +1) {
 				local deltaT is time:seconds - _kmos_perf_lastclock.
 				local sps is _kmos_perf_stepcount / deltaT.
 				_kmos_perf_sps:push(sps).
