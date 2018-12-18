@@ -84,7 +84,7 @@ local load is {
   if(not lib:contains(_lib)) {
     lib:add(_lib).
     runoncepath(_lib).
-    st_lib.
+    st_lib().
   }
 }.
 local stop is {
@@ -99,7 +99,7 @@ local stop is {
   }
   ppi:remove(id).
   dpi:remove(id).
-  st_proc.
+  st_proc().
 }.
 local do_exit is {
   for p in dpi:keys {
@@ -142,7 +142,7 @@ global kmos is lexicon(
       ppi:remove(id).
       dpi:remove(id).
     } else {
-      st_proc.
+      st_proc().
     }
   },
   "stop", stop,
@@ -170,7 +170,7 @@ until dpi:length = 0 {
        proc["ppi"]["last"] + proc["ppi"]["interval"] < time:seconds) {
       set proc["ppi"]["last"] to time:seconds.
       runpath(path, proc).
-      st_proc.
+      st_proc().
     }
   }
   wait 0.
