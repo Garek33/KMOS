@@ -3,8 +3,8 @@
 parameter proc.
 
 print proc["ppi"].
-set proc["ppi"]["counter"] to proc["ppi"]["counter"] + 5.
-if(proc["ppi"]["counter"] > 60) {
+set proc["ppi"]["count"] to proc["ppi"]["count"] + 5.
+if(proc["ppi"]["count"] > 60) {
   print "done.".
   kmos["exit"]().
 }

@@ -4,67 +4,86 @@ print "#############################################".
 print "###### KMOS Startup #########################".
 print "#############################################".
 
-if(not exists("1:/run/proc")) {
-  print "rebooting...".
-  if(not exists("1:/boot/proc")) {
-    local proc is lexicon(
-      "sh",
-      lexicon(
-        "args", 0,
-        "interval", 0,
-        "last", 0
-      )
-    ).
-    writejson(proc, "1:/boot/proc").
-    print "FATAL: no proc found. example json written to /boot/proc".
-    print "will work with sh. otherwise edit to fit. Also consider /boot/lib".
-    exit.
-  }
-  copypath("1:/boot/proc", "1:/run/proc").
-  if(exists("1:/boot/lib")) {
-    copypath("1:/boot/lib", "1:/run/lib").
-  }
-  print "run info initialised.".
-}
-
-local ppi is readjson("1:/run/proc").
+local ppi is lexicon().
 local dpi is lexicon().
 local lib is list().
 
-if(exists("1:/run/lib")) {
-  print "loading libraries...".
-  set lib to readjson("1:/run/lib").
-  for l in lib {
-     print "> " + l.
-     runoncepath(l).
-  }
-  print "libraries loaded.".
-}
 
-print "booting...".
-for pid in ppi:keys {
-  print "> " + pid.
-  local proc is lexicon(
-    "id", pid,
-    "ppi", ppi[pid]
-  ).
-  dpi:add(pid, proc).
-  local path is "1:/bin/" + pid.
-  if(exists(path + "/boot")) {
-    runpath(path + "/boot", proc).
+local load is {
+  parameter file.
+  local lfi is open(file):readall:iterator.
+  until(not lfi:next) {
+    local path is "1:/lib/"+lfi:value.
+    if(not lib:contains(lfi:value)) {
+      lib:add(lfi:value).
+      runoncepath(path).
+    }
   }
-  if(exists(path + "/run")) {
-    runpath(path + "/run", proc).
-  }
-}
-print "done.".
-
+  writejson(lib, "1:/run/lib").
+}.
 local st_proc is {
   writejson(ppi, "1:/run/proc").
 }.
-local st_lib is {
-  writejson(lib, "1:/run/lib").
+local nproc is {
+  parameter pid, args is list().
+  local proc is lexicon(
+    "id", pid,
+    "ppi", lexicon(
+      "args", args,
+      "interval", 0,
+      "last", 0
+    )
+  ).
+  local path is "1:/bin/"+pid.
+  if(exists(path+"/lib")) {
+    load(path+"/lib").
+  }
+  dpi:add(pid,proc).
+  ppi:add(pid,proc["ppi"]).
+  if(exists(path+"/exec")) {
+    runpath(path+"/exec", proc).
+  }
+  if(exists(path+"/run")) {
+    runpath(path+"/run", proc).
+  }
+  st_proc().
 }.
+
+if(exists("1:/run/proc")) {
+  print "loading proc state...".
+  if(exists("1:/run/lib")) {
+    load("1:/run/lib").
+  }
+  set ppi to readjson("1:/run/proc").
+  for pid in ppi:keys {
+    print "> " + pid.
+    local proc is lexicon(
+      "id", pid,
+      "ppi", ppi[pid]
+    ).
+    dpi:add(pid, proc).
+    local path is "1:/bin/"+pid.
+    if(exists(path + "/boot")) {
+      runpath(path + "/boot", proc).
+    }
+    if(exists(path + "/run")) {
+      runpath(path + "run", proc).
+    }
+  }
+} else {
+  if(not exists("1:/base/autoexec")) {
+    print "FATAL: missing base/autoexec!".
+  } else {
+    print "autoexec...".
+    local ae is open("1:/base/autoexec"):readall:iterator.
+    until(not ae:next) {
+      local pid is ae:value.
+      print "> " + pid.
+      nproc(pid).
+    }
+  }
+}
+print "kmos booted.".
 
 local ok is lexicon(
   "tag", "OK",
@@ -79,14 +98,6 @@ local logerror is {
   ).
 }.
 
-local load is {
-  parameter _lib.
-  if(not lib:contains(_lib)) {
-    lib:add(_lib).
-    runoncepath(_lib).
-    st_lib().
-  }
-}.
 local stop is {
   parameter id.
   local proc is dpi[id].
@@ -109,42 +120,7 @@ local do_exit is {
 
 global kmos is lexicon(
   "load", load,
-  "start", {
-    parameter id, args.
-    local path is "1:/bin/" + id.
-    if(not exists(path)) {
-      return error("kmos:start:bin_missing", "Missing path 1:/bin/"+id).
-    }
-    local proc is lexicon(
-      "id", id,
-      "ppi", lexicon(
-        "args", args,
-        "interval", 0,
-        "last", 0
-      )
-    ).
-    ppi:add(id, proc["ppi"]).
-    dpi:add(id, proc).
-    if(exists(path+"/lib")) {
-      local lib is open(path+"/lib"):readall:iterator.
-      until(not lib:next) {
-        load(lib:value).
-      }
-    }
-    if(exists(path+"/exec")) {
-      runpath(path+"/exec", proc).
-    }
-    if(exists(path+"/run")) {
-      runpath(path+"/run", proc).
-    }
-    if(not exists(path+"/stop") and
-       not exists(path+"/loop")) {
-      ppi:remove(id).
-      dpi:remove(id).
-    } else {
-      st_proc().
-    }
-  },
+  "start", nproc,
   "stop", stop,
   "exit", do_exit,
   "reboot", {
