@@ -78,6 +78,38 @@ global kmos is lexicon(
     st_proc().
   }
 ).
+kmos:add("exec", {
+  parameter cl.
+  local args is list().
+  local cur is "".
+  local istr is false.
+  local iesc is false.
+  for c in cl {
+    if(iesc) {
+      set cur to cur+c.
+      set iesc to false.
+    } else if(c = "\") {
+      set iesc to true.
+    } else if(c = char(34)) {
+      toggle istr.
+    } else if(c = " " and not istr) {
+      args:add(cur).
+      set cur to "".
+    } else {
+      set cur to cur+c.
+    }
+  }
+  if(cur:length > 0) {
+    args:add(cur).
+  }
+  if(args:length < 1) {
+    //TODO: error?!
+    return.
+  }
+  local bin is args[0].
+  args:remove(0).
+  kmos["start"](bin,args).
+}).
 kmos:add("exit", {
   for p in ppi {
     kmos["stop"](p["pid"]).
@@ -121,9 +153,9 @@ if(exists("1:/run/proc")) {
     print "autoexec...".
     local ae is open("1:/base/autoexec"):readall:iterator.
     until(not ae:next) {
-      local bin is ae:value.
-      print "> " + bin.
-      kmos["start"](bin).
+      local cmd is ae:value.
+      print "> " + cmd.
+      kmos["exec"](cmd).
     }
   }
 }
