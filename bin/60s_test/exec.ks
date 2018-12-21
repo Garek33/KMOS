@@ -2,5 +2,5 @@
 
 parameter proc.
 
-proc["ppi"]:add("count", 0).
-set proc["ppi"]["interval"] to 5.
+proc:add("count", 0).
+set proc["interval"] to 5.
