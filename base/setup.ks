@@ -56,3 +56,5 @@ if(bootpath:matchespattern("^[^/]:/")) {
     set bootpath to bootpath:substring(index+2, bootpath:length -index -2).
 }
 set core:bootfilename to bootpath.
+
+reboot.
