@@ -76,58 +76,58 @@ global kmos is lexicon(
       set proc["state"] to "done".
     }
     st_proc().
+  },
+  "exec", {
+    parameter cl.
+    local args is list().
+    local cur is "".
+    local istr is false.
+    local iesc is false.
+    for c in cl {
+      if(iesc) {
+        set cur to cur+c.
+        set iesc to false.
+      } else if(c = "\") {
+        set iesc to true.
+      } else if(c = char(34)) {
+        toggle istr.
+      } else if(c = " " and not istr) {
+        args:add(cur).
+        set cur to "".
+      } else {
+        set cur to cur+c.
+      }
+    }
+    if(cur:length > 0) {
+      args:add(cur).
+    }
+    if(args:length < 1) {
+      //TODO: error?!
+      return.
+    }
+    local bin is args[0].
+    args:remove(0).
+    kmos["start"](bin,args).
+  },
+  "exit", {
+    for p in ppi {
+      kmos["stop"](p["pid"]).
+    }
+  },
+  "reboot",{
+    kmos["exit"]().
+    deletepath("1:/run/proc").
+    deletepath("1:/run/lib").
+    reboot.
+  },
+  "info",{
+    return lexicon(
+      "version", "0.1",
+      "proc", ppi:copy,
+      "lib", lib:copy
+    ).
   }
 ).
-kmos:add("exec", {
-  parameter cl.
-  local args is list().
-  local cur is "".
-  local istr is false.
-  local iesc is false.
-  for c in cl {
-    if(iesc) {
-      set cur to cur+c.
-      set iesc to false.
-    } else if(c = "\") {
-      set iesc to true.
-    } else if(c = char(34)) {
-      toggle istr.
-    } else if(c = " " and not istr) {
-      args:add(cur).
-      set cur to "".
-    } else {
-      set cur to cur+c.
-    }
-  }
-  if(cur:length > 0) {
-    args:add(cur).
-  }
-  if(args:length < 1) {
-    //TODO: error?!
-    return.
-  }
-  local bin is args[0].
-  args:remove(0).
-  kmos["start"](bin,args).
-}).
-kmos:add("exit", {
-  for p in ppi {
-    kmos["stop"](p["pid"]).
-  }
-}).
-kmos:add("reboot",{
-  do_exit.
-  deletepath("1:/run/proc").
-  deletepath("1:/run/lib").
-  reboot.
-}).
-kmos:add("info",{
-  return lexicon(
-    "version", "0.1",
-    "proc", ppi:copy,
-    "lib", lib:copy
-  ).
-}).
 
 
 if(exists("1:/run/proc")) {

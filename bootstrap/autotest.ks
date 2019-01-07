@@ -11,4 +11,6 @@ copypath("0:/kmos/bin/timer", "1:/bin/timer").
 log "timer 10 60" to "1:/base/autoexec".
 log "timer 2 20" to "1:/base/autoexec".
 
+set core:bootfilename to "base/kmos.ks".
+
 reboot.
