@@ -41,7 +41,7 @@ global kmos is lexicon(
       "interval", 0,
       "last", 0
     ).
-    local path is "1:/bin/"+bin.
+    local path is "1:/mod/"+bin.
     if(exists(path+"/lib")) {
       load(path+"/lib").
     }
@@ -66,7 +66,7 @@ global kmos is lexicon(
   "stop",{
     parameter pid.
     local proc is ppi[pid].
-    local path is "1:/bin/" + proc["bin"].
+    local path is "1:/mod/" + proc["bin"].
     if(exists(path+"/stop")) {
       runpath(path+"/stop", proc).
     }
@@ -138,7 +138,7 @@ if(exists("1:/run/proc")) {
   set ppi to readjson("1:/run/proc").
   for proc in ppi {
     print "> " + proc["bin"] + ":" + proc["pid"].
-    local path is "1:/bin/"+proc["bin"].
+    local path is "1:/mod/"+proc["bin"].
     if(exists(path + "/boot")) {
       runpath(path + "/boot", proc).
     }
@@ -163,7 +163,7 @@ print "kmos booted.".
 
 until ppi:length = 0 {
   for proc in ppi {
-    local path is "1:/bin/" + proc["bin"] + "/loop".
+    local path is "1:/mod/" + proc["bin"] + "/loop".
     if(proc["state"] = "loop" and exists(path) and
        proc["last"] + proc["interval"] < time:seconds) {
       runpath(path, proc).
