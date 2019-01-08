@@ -4,6 +4,8 @@ print "#############################################".
 print "###### KMOS Startup #########################".
 print "#############################################".
 
+runpath("1:/base/coreutils").
+
 local ppi is list().
 local lib is list().
 
@@ -77,6 +79,15 @@ global kmos is lexicon(
     }
     st_proc().
   },
+  "cmd", {
+    parameter bin, args is list().
+    local code is "runpath(" + char(34) + "1:/cmd/" + bin + char(34).
+    for a in args {
+      set code to code + "," + var2code(a).
+    }
+    set code to code + ").".
+    make_dlg(code)().
+  },
   "exec", {
     parameter cl.
     local args is list().
@@ -107,7 +118,11 @@ global kmos is lexicon(
     }
     local bin is args[0].
     args:remove(0).
-    kmos["start"](bin,args).
+    if(exists("1:/mod/" + bin)) {
+      kmos["start"](bin,args).
+    } else {
+      kmos["cmd"](bin,args).
+    }
   },
   "exit", {
     for p in ppi {

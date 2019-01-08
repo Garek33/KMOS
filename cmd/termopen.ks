@@ -1,0 +1,1 @@
+core:doevent("open terminal").

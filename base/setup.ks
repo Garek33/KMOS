@@ -3,6 +3,7 @@
 parameter name, srcroot, instroot is "1:".
 
 local mods is uniqueset().
+local cmds is uniqueset().
 local libs is uniqueset().
 
 local addlst is {
@@ -18,6 +19,9 @@ local addlst is {
             mods:add(id).
             addlst(srcroot + "/mod/" + id + "/lib").
             addlst(srcroot + "/mod/" + id + "/dep").
+        } else if(exists(srcroot + "/cmd/" + id)) {
+            cmds:add(id).
+            addlst(srcroot + "/cmd/" + id + ".dep").
         } else if(exists(srcroot + "/lib/" + id)) {
             libs:add(id).
             addlst(srcroot + "/lib/" + id + ".dep").
@@ -37,10 +41,16 @@ local rss is {
 }.
 
 copypath(srcroot + "/base/kmos", instroot + "/base/kmos").
+copypath(srcroot + "/base/coreutils", instroot + "/base/coreutils").
 
 for mod in mods {
     copypath(srcroot + "/mod/" + mod, instroot + "/mod/" + mod).
     rss(srcroot + "/mod/" + mod + "/setup").
+}
+
+for cmd in cmds {
+    copypath(srcroot + "/cmd/" + cmd, instroot + "/cmd/" + cmd).
+    rss(srcroot + "/cmd/" + cmd + ".setup").
 }
 
 for lib in libs {
