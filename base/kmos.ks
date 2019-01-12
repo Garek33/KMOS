@@ -86,7 +86,7 @@ global kmos is lexicon(
       set code to code + "," + var2code(a).
     }
     set code to code + ").".
-    make_dlg(code)().
+    exec(code).
   },
   "exec", {
     parameter cl.

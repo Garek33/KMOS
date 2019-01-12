@@ -13,7 +13,7 @@ global var2code is {
     parameter x.
     if(x:typename = "":typename) {
         return char(34) + x:replace(char(34), char(34)+"+char(34)+"+char(34)) + char(34).
-    } else if(x:typename = 1:typename) {
+    } else if(x:typename = 1:typename or x:typename = true:typename) {
         return x:tostring.
     } else {
         local tfn is getTmpFn().
@@ -39,4 +39,8 @@ global make_dlg is {
 global eval is {
     parameter code.
     return make_dlg("return (" + code + ").")().
+}.
+global exec is {
+    parameter code.
+    return make_dlg(code)().
 }.
