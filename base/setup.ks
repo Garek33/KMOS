@@ -37,7 +37,7 @@ local function addlst {
 
 global init is {
     parameter fn.
-    copypath(srcroot + "/init/" + fn, instroot + "/init/" + fn).
+    copypath(srcroot + "/init/" + fn, instroot + "/base/init").
 }.
 
 runpath(srcroot + "/setup/" + name).

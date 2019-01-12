@@ -154,9 +154,7 @@ if(exists(instroot+"/run/proc")) {
   }
 } else {
   print "initializing...".
-  for f in open(instroot + "/init"):list:keys {
-    runpath(instroot + "/init/" + f).
-  }
+  runpath(instroot+"/base/init").
 }
 print "kmos booted.".
 
