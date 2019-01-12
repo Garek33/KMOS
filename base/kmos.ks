@@ -1,10 +1,15 @@
 @lazyglobal off.
 
+parameter instroot is "1:".
+
 print "#############################################".
 print "###### KMOS Startup #########################".
 print "#############################################".
 
-runpath("1:/base/coreutils").
+local core is list("coreutils").
+for s in core {
+  runoncepath(instroot + "/base/" + s).
+}
 
 local ppi is list().
 local lib is list().
@@ -13,16 +18,16 @@ local load is {
   parameter file.
   local lfi is open(file):readall:iterator.
   until(not lfi:next) {
-    local path is "1:/lib/"+lfi:value.
+    local path is instroot+"/lib/"+lfi:value.
     if(not lib:contains(lfi:value)) {
       lib:add(lfi:value).
       runoncepath(path).
     }
   }
-  writejson(lib, "1:/run/lib").
+  writejson(lib, instroot+"/run/lib").
 }.
 local st_proc is {
-  writejson(ppi, "1:/run/proc").
+  writejson(ppi, instroot+"/run/proc").
 }.
 
 
@@ -43,7 +48,7 @@ global kmos is lexicon(
       "interval", 0,
       "last", 0
     ).
-    local path is "1:/mod/"+bin.
+    local path is instroot+"/mod/"+bin.
     if(exists(path+"/lib")) {
       load(path+"/lib").
     }
@@ -68,7 +73,7 @@ global kmos is lexicon(
   "stop",{
     parameter pid.
     local proc is ppi[pid].
-    local path is "1:/mod/" + proc["bin"].
+    local path is instroot+"/mod/" + proc["bin"].
     if(exists(path+"/stop")) {
       runpath(path+"/stop", proc).
     }
@@ -81,7 +86,7 @@ global kmos is lexicon(
   },
   "cmd", {
     parameter bin, args is list().
-    local code is "runpath(" + char(34) + "1:/cmd/" + bin + char(34).
+    local code is "runpath(" + char(34) + instroot+"/cmd/" + bin + char(34).
     for a in args {
       set code to code + "," + var2code(a).
     }
@@ -118,7 +123,7 @@ global kmos is lexicon(
     }
     local bin is args[0].
     args:remove(0).
-    if(exists("1:/mod/" + bin)) {
+    if(exists(instroot+"/mod/" + bin)) {
       kmos["start"](bin,args).
     } else {
       kmos["cmd"](bin,args).
@@ -131,8 +136,8 @@ global kmos is lexicon(
   },
   "reboot",{
     kmos["exit"]().
-    deletepath("1:/run/proc").
-    deletepath("1:/run/lib").
+    deletepath(instroot+"/run/proc").
+    deletepath(instroot+"/run/lib").
     reboot.
   },
   "info",{
@@ -145,15 +150,15 @@ global kmos is lexicon(
 ).
 
 
-if(exists("1:/run/proc")) {
+if(exists(instroot+"/run/proc")) {
   print "loading proc state...".
-  if(exists("1:/run/lib")) {
-    load("1:/run/lib").
+  if(exists(instroot+"/run/lib")) {
+    load(instroot+"/run/lib").
   }
-  set ppi to readjson("1:/run/proc").
+  set ppi to readjson(instroot+"/run/proc").
   for proc in ppi {
     print "> " + proc["bin"] + ":" + proc["pid"].
-    local path is "1:/mod/"+proc["bin"].
+    local path is instroot+"/mod/"+proc["bin"].
     if(exists(path + "/boot")) {
       runpath(path + "/boot", proc).
     }
@@ -162,11 +167,11 @@ if(exists("1:/run/proc")) {
     }
   }
 } else {
-  if(not exists("1:/base/autoexec")) {
+  if(not exists(instroot+"/base/autoexec")) {
     print "FATAL: missing base/autoexec!".
   } else {
     print "autoexec...".
-    local ae is open("1:/base/autoexec"):readall:iterator.
+    local ae is open(instroot+"/base/autoexec"):readall:iterator.
     until(not ae:next) {
       local cmd is ae:value.
       print "> " + cmd.
@@ -178,7 +183,7 @@ print "kmos booted.".
 
 until ppi:length = 0 {
   for proc in ppi {
-    local path is "1:/mod/" + proc["bin"] + "/loop".
+    local path is instroot+"/mod/" + proc["bin"] + "/loop".
     if(proc["state"] = "loop" and exists(path) and
        proc["last"] + proc["interval"] < time:seconds) {
       runpath(path, proc).
