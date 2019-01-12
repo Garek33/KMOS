@@ -3,7 +3,7 @@
 parameter instroot is "1:".
 
 print "#############################################".
-print "###### KMOS Startup #########################".
+print "###### Kerbal Modular Operating System ######".
 print "#############################################".
 
 local core is list("coreutils").
@@ -14,26 +14,13 @@ for s in core {
 local ppi is list().
 local lib is list().
 
-local load is {
-  parameter file.
-  local lfi is open(file):readall:iterator.
-  until(not lfi:next) {
-    local path is instroot+"/lib/"+lfi:value.
-    if(not lib:contains(lfi:value)) {
-      lib:add(lfi:value).
-      runoncepath(path).
-    }
-  }
-  writejson(lib, instroot+"/run/lib").
-}.
-local st_proc is {
-  writejson(ppi, instroot+"/run/proc").
-}.
-
-
 global kmos is lexicon(
+  "verbose", true,
   "start", {
     parameter bin, args is list().
+    if(kmos["verbose"]) {
+      print "KMOS - start: " + bin + " " + args:join(" ").
+    }
     local pid is ppi:length().
     for m in ppi {
       if(m["state"] = "done") {
@@ -74,6 +61,9 @@ global kmos is lexicon(
     parameter pid.
     local proc is ppi[pid].
     local path is instroot+"/mod/" + proc["bin"].
+    if(kmos["verbose"]) {
+      print "KMOS - stop: <" + pid + "> " + proc["bin"] + " " + proc["args"]:join(" ").
+    }
     if(exists(path+"/stop")) {
       runpath(path+"/stop", proc).
     }
@@ -86,6 +76,9 @@ global kmos is lexicon(
   },
   "cmd", {
     parameter bin, args is list().
+    if(kmos["verbose"]) {
+      print "KMOS - cmd: " + bin + " " + args:join(" ").
+    }
     local code is "runpath(" + char(34) + instroot+"/cmd/" + bin + char(34).
     for a in args {
       set code to code + "," + var2code(a).
@@ -94,35 +87,7 @@ global kmos is lexicon(
     exec(code).
   },
   "exec", {
-    parameter cl.
-    local args is list().
-    local cur is "".
-    local istr is false.
-    local iesc is false.
-    for c in cl {
-      if(iesc) {
-        set cur to cur+c.
-        set iesc to false.
-      } else if(c = "\") {
-        set iesc to true.
-      } else if(c = char(34)) {
-        toggle istr.
-      } else if(c = " " and not istr) {
-        args:add(cur).
-        set cur to "".
-      } else {
-        set cur to cur+c.
-      }
-    }
-    if(cur:length > 0) {
-      args:add(cur).
-    }
-    if(args:length < 1) {
-      //TODO: error?!
-      return.
-    }
-    local bin is args[0].
-    args:remove(0).
+    parameter bin, args is list().
     if(exists(instroot+"/mod/" + bin)) {
       kmos["start"](bin,args).
     } else {
@@ -130,14 +95,16 @@ global kmos is lexicon(
     }
   },
   "exit", {
+    if(kmos["verbose"]) {
+      print "KMOS - exit".
+    }
     for p in ppi {
       kmos["stop"](p["pid"]).
     }
   },
   "reboot",{
     kmos["exit"]().
-    deletepath(instroot+"/run/proc").
-    deletepath(instroot+"/run/lib").
+    deletepath(instroot + "/run").
     reboot.
   },
   "info",{
@@ -148,6 +115,25 @@ global kmos is lexicon(
     ).
   }
 ).
+
+local  function load {
+  parameter file.
+  local lfi is open(file):readall:iterator.
+  until(not lfi:next) {
+    local path is instroot+"/lib/"+lfi:value.
+    if(not lib:contains(lfi:value)) {
+      if(kmos["verbose"]) {
+        print "KMOS - lib: " + lfi:value.
+      }
+      lib:add(lfi:value).
+      runoncepath(path).
+    }
+  }
+  writejson(lib, instroot+"/run/lib").
+}
+local function st_proc {
+  writejson(ppi, instroot+"/run/proc").
+}
 
 
 if(exists(instroot+"/run/proc")) {
@@ -167,16 +153,9 @@ if(exists(instroot+"/run/proc")) {
     }
   }
 } else {
-  if(not exists(instroot+"/base/autoexec")) {
-    print "FATAL: missing base/autoexec!".
-  } else {
-    print "autoexec...".
-    local ae is open(instroot+"/base/autoexec"):readall:iterator.
-    until(not ae:next) {
-      local cmd is ae:value.
-      print "> " + cmd.
-      kmos["exec"](cmd).
-    }
+  print "initializing...".
+  for f in open(instroot + "/init"):list:keys {
+    runpath(instroot + "/init/" + f).
   }
 }
 print "kmos booted.".
@@ -185,7 +164,10 @@ until ppi:length = 0 {
   for proc in ppi {
     local path is instroot+"/mod/" + proc["bin"] + "/loop".
     if(proc["state"] = "loop" and exists(path) and
-       proc["last"] + proc["interval"] < time:seconds) {
+      proc["last"] + proc["interval"] < time:seconds) {
+      if(kmos["verbose"]) {
+        print "KMOS - loop: <" + proc["pid"] + "> " + proc["bin"] + " " + proc["args"]:join(" ").
+      }
       runpath(path, proc).
       set proc["last"] to time:seconds.
       if(proc["state"] = "exit") {

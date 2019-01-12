@@ -6,7 +6,24 @@ local mods is uniqueset().
 local cmds is uniqueset().
 local libs is uniqueset().
 
-local addlst is {
+global install is {
+    parameter id.
+    if(exists(srcroot + "/mod/" + id)) {
+        mods:add(id).
+        addlst(srcroot + "/mod/" + id + "/lib").
+        addlst(srcroot + "/mod/" + id + "/dep").
+    } else if(exists(srcroot + "/cmd/" + id)) {
+        cmds:add(id).
+        addlst(srcroot + "/cmd/" + id + ".dep").
+    } else if(exists(srcroot + "/lib/" + id)) {
+        libs:add(id).
+        addlst(srcroot + "/lib/" + id + ".dep").
+    } else {
+        //TODO: ERROR!
+    }
+}.
+
+local function addlst {
     parameter fn.
     if(not exists(fn)) {
         return.
@@ -14,24 +31,16 @@ local addlst is {
     local lst is open(fn):readall:iterator.
 
     until not lst:next {
-        local id is lst:value.
-        if(exists(srcroot + "/mod/" + id)) {
-            mods:add(id).
-            addlst(srcroot + "/mod/" + id + "/lib").
-            addlst(srcroot + "/mod/" + id + "/dep").
-        } else if(exists(srcroot + "/cmd/" + id)) {
-            cmds:add(id).
-            addlst(srcroot + "/cmd/" + id + ".dep").
-        } else if(exists(srcroot + "/lib/" + id)) {
-            libs:add(id).
-            addlst(srcroot + "/lib/" + id + ".dep").
-        } else {
-            //TODO: ERROR!
-        }
+        install(lst:value).   
     }
+}
+
+global init is {
+    parameter fn.
+    copypath(srcroot + "/init/" + fn, instroot + "/init/" + fn).
 }.
 
-addlst(srcroot + "/setup/" + name + ".ksl").
+runpath(srcroot + "/setup/" + name).
 
 local rss is {
     parameter path.
@@ -57,8 +66,6 @@ for lib in libs {
     copypath(srcroot + "/lib/" + lib, instroot + "/lib/" + lib).
     rss(srcroot + "/lib/" + lib + ".setup").
 }
-
-copypath(srcroot + "/setup/" + name + ".ae", instroot + "/base/autoexec").
 
 local bootpath is instroot + "/base/kmos".
 if(bootpath:matchespattern("^[^/]:/")) {
