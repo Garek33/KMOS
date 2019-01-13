@@ -32,6 +32,7 @@ A module is a collection of scripts to manage an ongoing task. It is defined by 
  - `run`: this is run both when a new task with this module is started and when it is restored upon kOS reboot
  - `stop`: this is run when a task with this module is stopped
  - `loop`: this is run when the task loops
+
 All scripts are passed the persistent task data as a parameter, it is a lexicon with the following entries:
  - `pid`: the task's index
  - `mod`: the module name
