@@ -23,6 +23,8 @@ The Kerbal Modular Operating System - a framework for Kerboscript, in Kerboscrip
   - the variable `srcroot` corresponding to the root folder of your KMOS archive installation
   - the function `install(<component>)` to install a KMOS Component
   - the function `init(<scriptname>)` to set the initialization script to the script found at `$SRCROOT/init/$scriptname`. This must be called at least once.
+  - the function `instfile(<src>,<dest>)` to install a specific file or folder. Both `$src` and `$dest` must be complete paths. This detects .ks scripts and compiles them if appropriate.
+- If `instdbg` is false, every script installed is first compiled instead. If the compiled version is actually smaller, that is used. Otherwise, the script is used as-is. If `instdbg` is true, all scripts are installed as-is.
 - a KMOS Component is either a Module, a Cmd or a Library
 - the initialization script is run when KMOS starts and finds no persisted state, i.e. after the setup, and if you reboot KMOS (different from a kOS reboot, across which state is persisted)
   
