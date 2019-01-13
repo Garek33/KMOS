@@ -1,17 +1,19 @@
 @lazyglobal off.
 
-parameter instroot is "1:".
+parameter _instroot is "1:".
+global instroot is _instroot.
 
 print "#############################################".
 print "###### Kerbal Modular Operating System ######".
 print "#############################################".
 
-local core is list("coreutils").
+local core is list("coreutils", "event").
 for s in core {
   runoncepath(instroot + "/base/" + s).
 }
 
 local tasks is list().
+local dtd is list().
 local lib is list().
 
 global kmos is lexicon(
@@ -41,21 +43,24 @@ global kmos is lexicon(
     }
     if(pid = tasks:length()) {
       tasks:add(task).
+      dtd:add(lexicon()).
     } else {
       set tasks[pid] to task.
+      set dtd[pid] to lexcion().
     }
     if(exists(path+"/exec")) {
-      runpath(path+"/exec", task).
+      runpath(path+"/exec", task, dtd[pid]).
     }
     if(exists(path+"/run")) {
-      runpath(path+"/run", task).
+      runpath(path+"/run", task, dtd[pid]).
     }
     if(exists(path+"/loop")) {
       set task["state"] to "loop".
     } else if(task["state"] = "init") {
-      set task["pii"]["state"] to "wait".
+      set task["state"] to "empty".
     }
     st_tasks().
+    return pid.
   },
   "stop",{
     parameter pid.
@@ -65,14 +70,31 @@ global kmos is lexicon(
       print "KMOS - stop: <" + pid + "> " + task["mod"] + " " + task["args"]:join(" ").
     }
     if(exists(path+"/stop")) {
-      runpath(path+"/stop", task).
+      runpath(path+"/stop", task, dtd[pid]).
     }
     if(task["state"] = "loop") {
       set task["state"] to "exit".
     } else {
       set task["state"] to "done".
     }
+    event("kmos:stop:"+pid)["trigger"]().
     st_tasks().
+  },
+  "wait",{
+    parameter waiter, waitee.
+    set tasks[waiter]["state"] to "wait".
+    event("kmos:stop:"+waitee)["sub"](
+      "kmos:waiter:"+waiter,
+      "kmos["+char(34)+"unwait"+char(34)+"]("+waiter+","+waitee+","+char(34)+tasks[waiter]["state"]+char(34)+")."
+    ).
+  },
+  "unwait",{
+    parameter waiter, waitee, rstate.
+    local t is tasks[waiter].
+    if(t["state"] = "wait") {
+      set t["state"] to rstate.
+    }
+    event("kmos:stop:"+waitee)["unsub"]("kmos:waiter:"+waiter).
   },
   "cmd", {
     parameter id, args is list().
@@ -106,13 +128,6 @@ global kmos is lexicon(
     kmos["exit"]().
     deletepath(instroot + "/run").
     reboot.
-  },
-  "info",{
-    return lexicon(
-      "version", "0.1",
-      "tasks", tasks:copy,
-      "lib", lib:copy
-    ).
   }
 ).
 
@@ -141,15 +156,16 @@ if(exists(instroot+"/run/tasks")) {
   if(exists(instroot+"/run/lib")) {
     load(instroot+"/run/lib").
   }
-  set tasks to readjson(instroot+"/run/tasks").
+  set tasks to readjson(instroot+"/run/tasks"). 
   for task in tasks {
     print "> " + task["mod"] + ":" + task["pid"].
     local path is instroot+"/mod/"+task["mod"].
+    dtd:add(lexicon()).
     if(exists(path + "/boot")) {
-      runpath(path + "/boot", task).
+      runpath(path + "/boot", task, dtd[dtd:length-1]).
     }
     if(exists(path + "/run")) {
-      runpath(path + "run", task).
+      runpath(path + "run", task, dtd[dtd:length-1]).
     }
   }
 } else {
@@ -163,10 +179,10 @@ until tasks:length = 0 {
     local path is instroot+"/mod/" + task["mod"] + "/loop".
     if(task["state"] = "loop" and exists(path) and
       task["last"] + task["interval"] < time:seconds) {
-      if(kmos["verbose"]) {
-        print "KMOS - loop: <" + task["pid"] + "> " + task["mod"] + " " + task["args"]:join(" ").
-      }
-      runpath(path, task).
+      // if(kmos["verbose"]) {
+      //   print "KMOS - loop: <" + task["pid"] + "> " + task["mod"] + " " + task["args"]:join(" ").
+      // }
+      runpath(path, task, dtd[task["pid"]]).
       set task["last"] to time:seconds.
       if(task["state"] = "exit") {
         set task["state"] to "done".

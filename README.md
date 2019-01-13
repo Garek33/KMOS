@@ -33,13 +33,16 @@ A module is a collection of scripts to manage an ongoing task. It is defined by 
  - `stop`: this is run when a task with this module is stopped
  - `loop`: this is run when the task loops
 
-All scripts are passed the persistent task data as a parameter, it is a lexicon with the following entries:
+All scripts are passed two parameters. The first is the persistent task data, a lexicon with the following entries by the scheduler:
  - `pid`: the task's index
  - `mod`: the module name
  - `args`: the list of additional arguments passed to `kmos["start"]`
  - `state`: the current state of the task, primarily for internal use
  - `interval`: the interval at which `loop` is called
  - `last`: the timestamp `loop` was last called
+
+The second parameter is another lexicon with non-persistent task data. The scheduler does not use this, but module scripts should use it to pass non-serializable data acrosse calls. Keep in mind that this is not persisted across kOS reboots - use a `run` script to reconstruct it from persistent data!
+
 A module directory may also contain file called `dep`, specifying dependencies with one entry per line.
 
 ## Cmd
@@ -57,6 +60,14 @@ The task scheduler's interface is contained in a global lexicon `kmos`. It has t
 - `exec(<id>, <args>)`: determines whether `$id` is a Cmd or Module and does `start` or `cmd` appropriatly.
 - `exit()`: stops all tasks, resulting in KMOS exiting to the kOS Shell.
 - `reboot()`: clears the persistent state and reboots kOS, resulting in KMOS reinitializing.
+- `wait(<waiter>,<waitee>)`: makes the task `$waiter` wait until `$waitee` stops. A single task cannot wait for multiple other tasks - the first wait to be completed will re-enable the task.
+- `unwait(<waiter>,<waitee>,<rstate>)`: makes the task `$waiter` no longer wait for `$waitee` and restores it's state to `$rstate`.
+
+## Events
+The global function `event(<id>)` returns the interface to the event identified by `$id`. An event is created by the first call to `event` with it's id. The interface is a lexicon with the following entries:
+- `sub(<sid>,<code>)`: when the event is triggered, execute `$code`. `$sid` identifies the code for removal via `unsub`.
+- `unsub(<sid>)`: remove the code identified by `$sid` from the event.
+- `trigger`: execute all code currently subscribed to the event.
 
 ## Coreutils
 The following global functions are additionally provided by KMOS:

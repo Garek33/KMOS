@@ -127,7 +127,7 @@ local rss is {
     }
 }.
 
-local kmoscore is list("/base/kmos", "/base/coreutils").
+local kmoscore is list("/base/kmos", "/base/coreutils", "/base/event").
 
 for f in kmoscore {
     instfile(srcroot + f, instroot + f).

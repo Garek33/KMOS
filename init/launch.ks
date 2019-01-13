@@ -1,0 +1,1 @@
+kmos["start"]("autostage",list()).

@@ -1,0 +1,2 @@
+install("autostage").
+init("launch").
