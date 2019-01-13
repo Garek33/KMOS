@@ -11,75 +11,75 @@ for s in core {
   runoncepath(instroot + "/base/" + s).
 }
 
-local ppi is list().
+local tasks is list().
 local lib is list().
 
 global kmos is lexicon(
   "verbose", true,
   "start", {
-    parameter bin, args is list().
+    parameter mod, args is list().
     if(kmos["verbose"]) {
-      print "KMOS - start: " + bin + " " + args:join(" ").
+      print "KMOS - start: " + mod + " " + args:join(" ").
     }
-    local pid is ppi:length().
-    for m in ppi {
+    local pid is tasks:length().
+    for m in tasks {
       if(m["state"] = "done") {
         set pid to m["pid"].
       }
     }
-    local proc is lexicon(
+    local task is lexicon(
       "pid", pid,
-      "bin", bin,
+      "mod", mod,
       "args", args,
       "state", "init",
       "interval", 0,
       "last", 0
     ).
-    local path is instroot+"/mod/"+bin.
+    local path is instroot+"/mod/"+mod.
     if(exists(path+"/lib")) {
       load(path+"/lib").
     }
-    if(pid = ppi:length()) {
-      ppi:add(proc).
+    if(pid = tasks:length()) {
+      tasks:add(task).
     } else {
-      set ppi[pid] to proc.
+      set tasks[pid] to task.
     }
     if(exists(path+"/exec")) {
-      runpath(path+"/exec", proc).
+      runpath(path+"/exec", task).
     }
     if(exists(path+"/run")) {
-      runpath(path+"/run", proc).
+      runpath(path+"/run", task).
     }
     if(exists(path+"/loop")) {
-      set proc["state"] to "loop".
-    } else if(proc["state"] = "init") {
-      set proc["pii"]["state"] to "wait".
+      set task["state"] to "loop".
+    } else if(task["state"] = "init") {
+      set task["pii"]["state"] to "wait".
     }
-    st_proc().
+    st_tasks().
   },
   "stop",{
     parameter pid.
-    local proc is ppi[pid].
-    local path is instroot+"/mod/" + proc["bin"].
+    local task is tasks[pid].
+    local path is instroot+"/mod/" + task["mod"].
     if(kmos["verbose"]) {
-      print "KMOS - stop: <" + pid + "> " + proc["bin"] + " " + proc["args"]:join(" ").
+      print "KMOS - stop: <" + pid + "> " + task["mod"] + " " + task["args"]:join(" ").
     }
     if(exists(path+"/stop")) {
-      runpath(path+"/stop", proc).
+      runpath(path+"/stop", task).
     }
-    if(proc["state"] = "loop") {
-      set proc["state"] to "exit".
+    if(task["state"] = "loop") {
+      set task["state"] to "exit".
     } else {
-      set proc["state"] to "done".
+      set task["state"] to "done".
     }
-    st_proc().
+    st_tasks().
   },
   "cmd", {
-    parameter bin, args is list().
+    parameter id, args is list().
     if(kmos["verbose"]) {
-      print "KMOS - cmd: " + bin + " " + args:join(" ").
+      print "KMOS - cmd: " + id + " " + args:join(" ").
     }
-    local code is "runpath(" + char(34) + instroot+"/cmd/" + bin + char(34).
+    local code is "runpath(" + char(34) + instroot+"/cmd/" + id + char(34).
     for a in args {
       set code to code + "," + var2code(a).
     }
@@ -87,18 +87,18 @@ global kmos is lexicon(
     exec(code).
   },
   "exec", {
-    parameter bin, args is list().
-    if(exists(instroot+"/mod/" + bin)) {
-      kmos["start"](bin,args).
+    parameter id, args is list().
+    if(exists(instroot+"/mod/" + id)) {
+      kmos["start"](id,args).
     } else {
-      kmos["cmd"](bin,args).
+      kmos["cmd"](id,args).
     }
   },
   "exit", {
     if(kmos["verbose"]) {
       print "KMOS - exit".
     }
-    for p in ppi {
+    for p in tasks {
       kmos["stop"](p["pid"]).
     }
   },
@@ -110,7 +110,7 @@ global kmos is lexicon(
   "info",{
     return lexicon(
       "version", "0.1",
-      "proc", ppi:copy,
+      "tasks", tasks:copy,
       "lib", lib:copy
     ).
   }
@@ -131,25 +131,25 @@ local  function load {
   }
   writejson(lib, instroot+"/run/lib").
 }
-local function st_proc {
-  writejson(ppi, instroot+"/run/proc").
+local function st_tasks {
+  writejson(tasks, instroot+"/run/tasks").
 }
 
 
-if(exists(instroot+"/run/proc")) {
-  print "loading proc state...".
+if(exists(instroot+"/run/tasks")) {
+  print "loading task state...".
   if(exists(instroot+"/run/lib")) {
     load(instroot+"/run/lib").
   }
-  set ppi to readjson(instroot+"/run/proc").
-  for proc in ppi {
-    print "> " + proc["bin"] + ":" + proc["pid"].
-    local path is instroot+"/mod/"+proc["bin"].
+  set tasks to readjson(instroot+"/run/tasks").
+  for task in tasks {
+    print "> " + task["mod"] + ":" + task["pid"].
+    local path is instroot+"/mod/"+task["mod"].
     if(exists(path + "/boot")) {
-      runpath(path + "/boot", proc).
+      runpath(path + "/boot", task).
     }
     if(exists(path + "/run")) {
-      runpath(path + "run", proc).
+      runpath(path + "run", task).
     }
   }
 } else {
@@ -158,24 +158,24 @@ if(exists(instroot+"/run/proc")) {
 }
 print "kmos booted.".
 
-until ppi:length = 0 {
-  for proc in ppi {
-    local path is instroot+"/mod/" + proc["bin"] + "/loop".
-    if(proc["state"] = "loop" and exists(path) and
-      proc["last"] + proc["interval"] < time:seconds) {
+until tasks:length = 0 {
+  for task in tasks {
+    local path is instroot+"/mod/" + task["mod"] + "/loop".
+    if(task["state"] = "loop" and exists(path) and
+      task["last"] + task["interval"] < time:seconds) {
       if(kmos["verbose"]) {
-        print "KMOS - loop: <" + proc["pid"] + "> " + proc["bin"] + " " + proc["args"]:join(" ").
+        print "KMOS - loop: <" + task["pid"] + "> " + task["mod"] + " " + task["args"]:join(" ").
       }
-      runpath(path, proc).
-      set proc["last"] to time:seconds.
-      if(proc["state"] = "exit") {
-        set proc["state"] to "done".
+      runpath(path, task).
+      set task["last"] to time:seconds.
+      if(task["state"] = "exit") {
+        set task["state"] to "done".
       }
-      st_proc().
+      st_tasks().
     }
   }
-  until ppi:length = 0 or ppi[ppi:length-1]["state"] <> "done" {
-    ppi:remove(ppi:length-1).
+  until tasks:length = 0 or tasks[tasks:length-1]["state"] <> "done" {
+    tasks:remove(tasks:length-1).
   }
   wait 0.
 }
