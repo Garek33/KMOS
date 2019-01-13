@@ -30,7 +30,7 @@ if(exists(str_fn)) {
 
 global event is {
     parameter id.
-    if(not events:has(id)) {
+    if(not events:haskey(id)) {
         events:add(id, lexicon()).
         sub_dlg:add(id, list()).
         writejson(events, str_fn).

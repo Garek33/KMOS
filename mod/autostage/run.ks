@@ -8,7 +8,7 @@ set dtd["use"] to {
     set dtd["se"] to list().
     for e in ae {
         if(e:ignition) {
-            print "autostage: registerd engine <" + e:tag + "> (" + e:title + ")".
+            dolog("autostage","registerd engine <" + e:tag + "> (" + e:title + ")").
             dtd["se"]:add(e).
         }
     }

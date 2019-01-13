@@ -1,5 +1,5 @@
 @lazyglobal off.
 
 parameter pd, dtd.
-print "autostage: initializing".
+dolog("autostage", "initializing").
 set pd["step"] to 0.
